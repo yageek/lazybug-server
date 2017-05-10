@@ -1,7 +1,7 @@
 syntax = "proto3";
 package lazybug;
 
-message FeedbackAddRequest {
+message Feedback {
     string identifier = 1;
     string creationDate = 2;
     string content = 3;

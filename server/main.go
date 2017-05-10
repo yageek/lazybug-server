@@ -29,7 +29,7 @@ func main() {
 		}
 
 		defer r.Body.Close()
-		feedb := &lazybug.FeedbackAddRequest{}
+		feedb := &lazybug.Feedback{}
 
 		log.Println("Unmarshalling data...")
 		err = proto.Unmarshal(buff, feedb)
