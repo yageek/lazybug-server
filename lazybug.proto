@@ -4,5 +4,7 @@ package lazybug;
 message FeedbackAddRequest {
     string identifier = 1;
     string creationDate = 2;
-    bytes content = 3;
+    string content = 3;
+    bytes meta = 4;
+    bytes snapshot = 5;
 }
