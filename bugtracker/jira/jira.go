@@ -2,14 +2,32 @@ package jira
 
 import (
 	"bytes"
-	"log"
-
-	"io/ioutil"
+	"encoding/json"
+	"fmt"
+	"html/template"
+	"strings"
 
 	"github.com/andygrunwald/go-jira"
 	"github.com/yageek/lazybug-server/bugtracker"
 	lazybug "github.com/yageek/lazybug-server/lazybug-protocol"
 )
+
+type templateValues struct {
+	Title       string
+	Date        string
+	Meta        string
+	Description string
+}
+
+var templateRaw string = `
+{{.Title}} at {{.Date}}
+{panel:title=Meta}
+{{.Meta}}
+{panel}
+{{.Description}}
+`
+
+var tmpl = template.Must(template.New("tmlp").Parse(templateRaw))
 
 type JiraTracker struct {
 	client   *jira.Client
@@ -28,38 +46,59 @@ func NewJiraTrackerClient(serverURL, username, password, project string) (bugtra
 
 func (j *JiraTracker) CreateTicket(f *lazybug.Feedback) error {
 
-	i := jira.Issue{
-		Fields: &jira.IssueFields{
-			Reporter: &jira.User{
-				Name: j.username,
-			},
-			Description: f.Content,
-			Type: jira.IssueType{
-				Name: "Bug",
-			},
-			Project: jira.Project{
-				Key: j.project,
-			},
-			Summary: "A lazy bug session.",
-		},
-	}
-	log.Printf("Value: %+v \n", i.Fields)
-	issue, response, err := j.client.Issue.Create(&i)
+	var meta map[string]interface{}
+	err := json.Unmarshal(f.GetMeta(), &meta)
 	if err != nil {
-		log.Printf("Impossible to create ticket:  %q \n", err)
-		buff, buffError := ioutil.ReadAll(response.Body)
-		defer response.Body.Close()
-		if buffError == nil {
-			log.Printf("Response: %+v \n", string(buff))
-		}
 		return err
 	}
 
-	log.Println("SuccessFully created issue:", issue.Key)
-	buff := bytes.NewBuffer(f.GetSnapshot())
-	_, _, err = j.client.Issue.PostAttachment(issue.ID, buff, f.GetIdentifier()+".jpg")
-	if err == nil {
-		log.Println("Successfully created attachements")
+	content := strings.Replace(FormatMeta(meta), "\n\n", "\n", -1)
+	values := templateValues{
+		Title:       fmt.Sprintf("[LAZYBUG Session] %s", f.GetIdentifier()),
+		Date:        f.GetCreationDate(),
+		Meta:        content,
+		Description: f.GetContent(),
 	}
-	return err
+
+	contentbuff := bytes.NewBufferString("")
+	err = tmpl.Execute(contentbuff, values)
+	if err != nil {
+		return err
+	}
+	fmt.Println("", contentbuff.String())
+	// i := jira.Issue{
+	// 	Fields: &jira.IssueFields{
+	// 		Reporter: &jira.User{
+	// 			Name: j.username,
+	// 		},
+	// 		Description: contentbuff.String(),
+	// 		Type: jira.IssueType{
+	// 			Name: "Bug",
+	// 		},
+	// 		Project: jira.Project{
+	// 			Key: j.project,
+	// 		},
+	// 		Summary: "A lazy bug session.",
+	// 	},
+	// }
+
+	// issue, response, err := j.client.Issue.Create(&i)
+	// if err != nil {
+	// 	log.Printf("Impossible to create ticket:  %q \n", err)
+	// 	buff, buffError := ioutil.ReadAll(response.Body)
+	// 	defer response.Body.Close()
+	// 	if buffError == nil {
+	// 		log.Printf("Response: %+v \n", string(buff))
+	// 	}
+	// 	return err
+	// }
+
+	// log.Println("SuccessFully created issue:", issue.Key)
+	// buff := bytes.NewBuffer(f.GetSnapshot())
+	// _, _, err = j.client.Issue.PostAttachment(issue.ID, buff, f.GetIdentifier()+".jpg")
+	// if err == nil {
+	// 	log.Println("Successfully created attachements")
+	// }
+	// return err
+	return nil
 }

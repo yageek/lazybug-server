@@ -28,6 +28,9 @@ func main() {
 		log.Panicln("Err:", err)
 	}
 
+	if err != nil {
+		log.Panicln("Err:", err)
+	}
 	// Sync
 	manager := trackersync.NewSyncManager(db, client)
 	defer manager.Stop()
