@@ -8,17 +8,32 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/gorilla/pat"
 	"github.com/urfave/negroni"
+	"github.com/yageek/lazybug-server/bugtracker"
 	"github.com/yageek/lazybug-server/lazybug-protocol"
 	"github.com/yageek/lazybug-server/store"
+	"github.com/yageek/lazybug-server/trackersync"
 )
 
 func main() {
+	// Init database.
 	db, err := store.NewBoltStore("lazybugdata.db")
 	if err != nil {
 		log.Panicln(err)
 	}
 	defer db.Close()
 
+	//Client
+	stdout, err := bugtracker.NewSTDOUTClient("", "", "")
+	if err != nil {
+		log.Panicln("Err:", err)
+	}
+
+	// Sync
+	manager := trackersync.NewSyncManager(db, stdout)
+	defer manager.Stop()
+	manager.Start()
+
+	// Start API
 	mux := pat.New()
 	mux.Put("/feedbacks", func(w http.ResponseWriter, r *http.Request) {
 		buff, err := ioutil.ReadAll(r.Body)

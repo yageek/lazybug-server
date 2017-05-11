@@ -4,6 +4,8 @@ import (
 	"time"
 
 	"github.com/boltdb/bolt"
+	"github.com/micro/protobuf/proto"
+	lazybug "github.com/yageek/lazybug-server/lazybug-protocol"
 )
 
 type boltStore struct {
@@ -29,12 +31,35 @@ func (s *boltStore) SaveFeedback(ID string, data []byte) error {
 	return err
 }
 
-func (s *boltStore) DeleteFeedback(ID string) error {
+func (s *boltStore) DeleteFeedbacks(IDs []string) error {
+	if len(IDs) < 1 {
+		return nil
+	}
+
 	return s.db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(feedbackBuckets))
-		return b.Delete([]byte(ID))
+		for _, v := range IDs {
+			b := tx.Bucket([]byte(feedbackBuckets))
+			if err := b.Delete([]byte(v)); err != nil {
+				return err
+			}
+		}
+		return nil
 	})
 }
+
 func (s *boltStore) Close() error {
 	return s.db.Close()
+}
+
+func (s *boltStore) Iterate(i Iterator) {
+	s.db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(feedbackBuckets))
+		c := b.Cursor()
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			feedb := &lazybug.Feedback{}
+			err := proto.Unmarshal(v, feedb)
+			i.Next(err, feedb)
+		}
+		return nil
+	})
 }

@@ -6,8 +6,9 @@ import (
 )
 
 type JiraTracker struct {
-	client  *jira.Client
-	project string
+	client   *jira.Client
+	project  string
+	username string
 }
 
 func NewJiraTrackerClient(serverURL, username, password string) (TrackerClient, error) {
@@ -16,26 +17,22 @@ func NewJiraTrackerClient(serverURL, username, password string) (TrackerClient, 
 		return nil, err
 	}
 	jiraClient.Authentication.SetBasicAuth(username, password)
-	return &JiraTracker{client: jiraClient}, nil
+	return &JiraTracker{client: jiraClient, username: username}, nil
 }
 
-func (j *JiraTracker) CreateTicket(f lazybug.Feedback) error {
+func (j *JiraTracker) CreateTicket(f *lazybug.Feedback) error {
 	i := jira.Issue{
 		Fields: &jira.IssueFields{
-			Assignee: &jira.User{
-				Name: "myuser",
-			},
 			Reporter: &jira.User{
-				Name: "youruser",
+				Name: j.username,
 			},
 			Description: "Test Issue",
 			Type: jira.IssueType{
-				ID: "60",
+				Name: "Bug",
 			},
 			Project: jira.Project{
-				Name: "PROJ1",
+				Name: j.project,
 			},
-			Summary: "Just a demo issue",
 		},
 	}
 	_, _, err := j.client.Issue.Create(&i)
