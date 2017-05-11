@@ -16,7 +16,7 @@ type SyncManager struct {
 }
 
 func NewSyncManager(st store.FeedbackStore, client bugtracker.TrackerClient) *SyncManager {
-	t := time.NewTicker(30 * time.Second)
+	t := time.NewTicker(10 * time.Second)
 	return &SyncManager{ticker: t, store: st, tracker: client}
 }
 
@@ -43,9 +43,10 @@ func (s *SyncManager) performSync() {
 		}
 		err = s.tracker.CreateTicket(feedback)
 		if err == nil {
+			log.Println("Successfully created ticket")
 			elementsToDelete = append(elementsToDelete, feedback.GetIdentifier())
 		} else {
-			log.Printf("Error creating ticket: %q \n", err)
+			log.Printf("Error creating ticket %s: %q \n", feedback.GetIdentifier(), err)
 		}
 	}))
 

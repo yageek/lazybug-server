@@ -1,4 +1,4 @@
-package bugtracker
+package github
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/google/go-github/github"
+	"github.com/yageek/lazybug-server/bugtracker"
 	lazybug "github.com/yageek/lazybug-server/lazybug-protocol"
 	"golang.org/x/oauth2"
 )
@@ -16,7 +17,7 @@ type GithubTracker struct {
 	user   string
 }
 
-func NewGithubTracker(user, repo, token string) (TrackerClient, error) {
+func NewGithubTracker(user, repo, token string) (bugtracker.TrackerClient, error) {
 	ctx := context.Background()
 	ts := oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: token},

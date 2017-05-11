@@ -23,13 +23,13 @@ func main() {
 	defer db.Close()
 
 	//Client
-	stdout, err := bugtracker.NewSTDOUTClient("", "", "")
+	client, err := bugtracker.NewSTDOUTClient("", "", "")
 	if err != nil {
 		log.Panicln("Err:", err)
 	}
 
 	// Sync
-	manager := trackersync.NewSyncManager(db, stdout)
+	manager := trackersync.NewSyncManager(db, client)
 	defer manager.Stop()
 	manager.Start()
 
@@ -46,7 +46,6 @@ func main() {
 		defer r.Body.Close()
 		feedb := &lazybug.Feedback{}
 
-		log.Println("Unmarshalling data...")
 		err = proto.Unmarshal(buff, feedb)
 		if err != nil {
 			log.Printf("Impossible to unmarshal data: %q \n", err)
