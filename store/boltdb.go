@@ -17,15 +17,30 @@ func NewBoltStore(dir string) (FeedbackStore, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// Start a writable transaction.
+	tx, err := db.Begin(true)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	// Use the transaction...
+	_, err = tx.CreateBucketIfNotExists([]byte(feedbackBuckets))
+	if err != nil {
+		return nil, err
+	}
+
+	// Commit the transaction and check for error.
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
 	return &boltStore{db: db}, nil
 }
 
 func (s *boltStore) SaveFeedback(ID string, data []byte) error {
 	err := s.db.Update(func(tx *bolt.Tx) error {
-		b, err := tx.CreateBucketIfNotExists(feedbackBuckets)
-		if err != nil {
-			return err
-		}
+		b := tx.Bucket([]byte(feedbackBuckets))
 		return b.Put([]byte(ID), data)
 	})
 	return err
@@ -37,8 +52,10 @@ func (s *boltStore) DeleteFeedbacks(IDs []string) error {
 	}
 
 	return s.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(feedbackBuckets))
+
 		for _, v := range IDs {
-			b := tx.Bucket([]byte(feedbackBuckets))
+
 			if err := b.Delete([]byte(v)); err != nil {
 				return err
 			}
